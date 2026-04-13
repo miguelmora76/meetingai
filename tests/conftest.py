@@ -48,9 +48,14 @@ def anyio_backend():
     return "asyncio"
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(scope="session")
 async def client():
-    """Return an async HTTP client that speaks directly to the ASGI app."""
+    """Return an async HTTP client that speaks directly to the ASGI app.
+
+    Session-scoped so the ASGI lifespan (and SQLAlchemy engine) starts once
+    and is torn down cleanly alongside the session event loop, avoiding
+    'Event loop is closed' errors from per-test engine teardown races.
+    """
     # Import after env vars are set so Settings validation passes
     from app.main import app
 
