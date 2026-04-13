@@ -38,8 +38,8 @@ uploads/*
 *.sqlite3
 
 # ── ML model caches ───────────────────────────────────────────────────────────
-# faster-whisper / CTranslate2 downloaded models
-models/
+# faster-whisper / CTranslate2 downloaded models (top-level only, not app/models/)
+/models/
 .cache/
 huggingface/
 sentence_transformers/
