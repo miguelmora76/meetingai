@@ -34,7 +34,12 @@ def event_loop():
     keeps the module-level SQLAlchemy engine on a stable loop.
     """
     loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     yield loop
+    # Drain any tasks (e.g. background processing) before closing
+    pending = asyncio.all_tasks(loop)
+    if pending:
+        loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
     loop.close()
 
 

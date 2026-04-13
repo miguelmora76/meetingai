@@ -20,6 +20,7 @@ from slowapi.errors import RateLimitExceeded
 
 from app.api.router import api_router
 from app.config.settings import get_settings
+from app.db.session import engine
 from app.limiter import limiter
 
 # Configure logging
@@ -46,6 +47,7 @@ async def lifespan(app: FastAPI):
     logger.info("=" * 60)
     yield
     logger.info("EngineerAI shutting down")
+    await engine.dispose()
 
 
 app = FastAPI(
