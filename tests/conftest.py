@@ -8,6 +8,7 @@ Tests that need settings overrides use `override_settings`.
 The `ADMIN_TOKEN` env var is set to "test-admin-token" for all tests.
 """
 
+import asyncio
 import os
 
 import pytest
@@ -22,6 +23,19 @@ os.environ.setdefault(
     "DATABASE_URL",
     "postgresql+asyncpg://meetingai:meetingai@localhost:5432/meetingai_test",
 )
+
+
+@pytest.fixture(scope="session")
+def event_loop():
+    """Single event loop shared across the entire test session.
+
+    Prevents 'Event loop is closed' errors caused by background tasks
+    (e.g. process_meeting_task) that outlive a per-test event loop, and
+    keeps the module-level SQLAlchemy engine on a stable loop.
+    """
+    loop = asyncio.new_event_loop()
+    yield loop
+    loop.close()
 
 
 @pytest.fixture(scope="session")
