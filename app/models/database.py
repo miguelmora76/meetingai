@@ -50,7 +50,7 @@ class Meeting(Base):
     title = Column(String(500), nullable=False)
     date = Column(DateTime(timezone=True), default=datetime.utcnow)
     participants = Column(ARRAY(String), default=list)
-    file_path = Column(String(1000), nullable=False)
+    file_path = Column(String(1000), nullable=True)
     file_name = Column(String(500))
     file_size_bytes = Column(BigInteger)
     duration_seconds = Column(Integer)

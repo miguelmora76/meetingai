@@ -1,7 +1,7 @@
 """Unit tests for ProcessingService — pipeline orchestration."""
 
 import uuid
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import ANY, AsyncMock, MagicMock
 
 import pytest
 
@@ -134,7 +134,7 @@ async def test_process_meeting_sets_failed_on_llm_error(make_service):
     with pytest.raises(Exception):
         await service.process_meeting(meeting_id)
 
-    repo.update_meeting_status.assert_any_await(meeting_id, "failed", error_message=pytest.approx)
+    repo.update_meeting_status.assert_any_await(meeting_id, "failed", error_message=ANY)
 
 
 @pytest.mark.asyncio
