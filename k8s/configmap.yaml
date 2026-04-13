@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: meetingai-config
+  namespace: meetingai
+data:
+  # Points to the postgres Service defined in postgres.yaml
+  DATABASE_URL: "postgresql+asyncpg://meetingai:meetingai@postgres:5432/meetingai"
+  LLM_PROVIDER: "anthropic"
+  SUMMARIZATION_MODEL: "claude-sonnet-4-6"
+  EXTRACTION_MODEL: "claude-haiku-4-5-20251001"
+  # Local sentence-transformers model (384-dim); no API key required
+  EMBEDDING_MODEL: "all-MiniLM-L6-v2"
+  # Local Whisper model; no OpenAI key required
+  WHISPER_MODE: "local"
+  WHISPER_MODEL: "tiny"
+  SLACK_ENABLED: "false"
+  SLACK_DEFAULT_CHANNEL: ""
+  CHUNK_SIZE: "1500"
+  CHUNK_OVERLAP: "200"
+  RETRIEVAL_TOP_K: "5"
+  UPLOAD_DIR: "/app/uploads"
+  MAX_UPLOAD_SIZE_MB: "500"

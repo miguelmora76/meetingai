@@ -1,0 +1,44 @@
+# Web framework
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+python-multipart>=0.0.6
+
+# Database
+sqlalchemy[asyncio]>=2.0.25
+asyncpg>=0.29.0
+alembic>=1.13.0
+pgvector>=0.2.4
+
+# LLM / AI
+openai>=1.12.0
+tiktoken>=0.5.0
+anthropic>=0.40.0
+sentence-transformers>=2.7.0
+faster-whisper>=1.0.0
+
+# Slack
+slack-sdk>=3.27.0
+aiohttp>=3.9.0
+
+# Utilities
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+python-dotenv>=1.0.0
+httpx>=0.26.0
+
+# Airtable
+pyairtable>=2.3.0
+
+# Reliability
+tenacity>=8.2.0
+
+# Observability
+python-json-logger>=2.0.7
+prometheus-fastapi-instrumentator>=6.1.0
+
+# Rate limiting
+slowapi>=0.1.9
+
+# Dev / Test
+pytest>=8.0.0
+pytest-asyncio>=0.23.0

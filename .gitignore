@@ -1,0 +1,86 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg
+*.egg-info/
+.eggs/
+dist/
+build/
+*.whl
+*.so
+*.dylib
+
+# ── Virtual environments ───────────────────────────────────────────────────────
+venv/
+.venv/
+env/
+.env/
+ENV/
+
+# ── Environment / secrets ──────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ── Kubernetes secrets (local copies with real API keys) ───────────────────────
+k8s/secret.local.yaml
+k8s/*.local.yaml
+
+# ── Uploads (keep directory, ignore files) ────────────────────────────────────
+uploads/*
+!uploads/.gitkeep
+
+# ── Database / SQLite ─────────────────────────────────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+
+# ── ML model caches ───────────────────────────────────────────────────────────
+# faster-whisper / CTranslate2 downloaded models
+models/
+.cache/
+huggingface/
+sentence_transformers/
+# common HuggingFace / torch cache dirs when placed in project root
+*.pt
+*.bin
+*.safetensors
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── Testing / coverage ────────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# ── Frontend ──────────────────────────────────────────────────────────────────
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+
+# ── IDE / editor ──────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ── OS artifacts ──────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ── Docker ────────────────────────────────────────────────────────────────────
+# Local override compose files (keep base docker-compose.yml)
+docker-compose.override.yml
+docker-compose.local.yml

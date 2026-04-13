@@ -1,0 +1,134 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: uploads-pvc
+  namespace: meetingai
+spec:
+  # ReadWriteOnce is fine for a single-replica setup.
+  # For replicas > 1 on different nodes, switch to ReadWriteMany (NFS/cloud CSI).
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: model-cache-pvc
+  namespace: meetingai
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: meetingai-app
+  namespace: meetingai
+  annotations:
+    # Prometheus scrape config — works with a standard Prometheus install
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8000"
+    prometheus.io/path: "/metrics"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: meetingai-app
+  template:
+    metadata:
+      labels:
+        app: meetingai-app
+    spec:
+      initContainers:
+        # Wait for postgres to accept connections before migrating
+        - name: wait-for-postgres
+          image: pgvector/pgvector:pg16
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h postgres -U meetingai; do
+                echo "Waiting for postgres..."; sleep 2
+              done
+        # Run Alembic migrations before the app starts
+        - name: run-migrations
+          image: localhost:5001/meetingai-app:latest
+          imagePullPolicy: Always
+          command: ["alembic", "upgrade", "head"]
+          envFrom:
+            - configMapRef:
+                name: meetingai-config
+            - secretRef:
+                name: meetingai-secrets
+      containers:
+        - name: app
+          image: localhost:5001/meetingai-app:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: meetingai-config
+            - secretRef:
+                name: meetingai-secrets
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+          volumeMounts:
+            - name: uploads
+              mountPath: /app/uploads
+            # Persist model downloads across restarts (Whisper + sentence-transformers)
+            - name: model-cache
+              mountPath: /root/.cache
+          # startupProbe allows up to 5 minutes for the first model download
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            failureThreshold: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+      volumes:
+        - name: uploads
+          persistentVolumeClaim:
+            claimName: uploads-pvc
+        - name: model-cache
+          persistentVolumeClaim:
+            claimName: model-cache-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: meetingai-app
+  namespace: meetingai
+spec:
+  selector:
+    app: meetingai-app
+  ports:
+    - port: 8000
+      targetPort: 8000
+  # LoadBalancer is supported by Docker Desktop — maps to localhost:8000
+  type: LoadBalancer
