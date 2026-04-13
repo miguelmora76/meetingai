@@ -7,7 +7,7 @@ PolymorphicRetriever: meetings + incidents + docs
 
 import logging
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from app.db.repository import MeetingRepository
 from app.llm.client import LLMClient

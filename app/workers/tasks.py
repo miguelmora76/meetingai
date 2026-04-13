@@ -14,6 +14,13 @@ import uuid
 from prometheus_client import Counter, Histogram
 
 from app.config.settings import get_settings
+from app.db.repository import DocumentRepository, IncidentRepository, MeetingRepository
+from app.db.session import AsyncSessionLocal
+from app.llm.client import LLMClient
+from app.services.doc_processing import DocProcessingService
+from app.services.incident_processing import IncidentProcessingService
+from app.services.processing import ProcessingService
+from app.slack.factory import create_slack_client
 
 # Custom processing metrics
 meeting_processing_total = Counter(
@@ -25,13 +32,6 @@ meeting_processing_duration = Histogram(
     "meeting_processing_duration_seconds",
     "Time spent processing a meeting (transcription through embedding)",
 )
-from app.db.repository import DocumentRepository, IncidentRepository, MeetingRepository
-from app.db.session import AsyncSessionLocal
-from app.llm.client import LLMClient
-from app.services.doc_processing import DocProcessingService
-from app.services.incident_processing import IncidentProcessingService
-from app.services.processing import ProcessingService
-from app.slack.factory import create_slack_client
 
 logger = logging.getLogger(__name__)
 

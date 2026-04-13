@@ -43,8 +43,6 @@ class TranscriptChunker:
         chunks: list[Chunk] = []
         current_sentences: list[str] = []
         current_length = 0
-        chunk_start_char = 0
-        char_pos = 0
 
         # Track character positions for each sentence
         sentence_positions: list[tuple[int, int]] = []

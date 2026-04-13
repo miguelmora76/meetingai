@@ -24,6 +24,8 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, 
 from slack_sdk.signature import SignatureVerifier
 
 from app.config.settings import Settings, get_settings
+from app.slack.factory import create_slack_client
+from app.slack.incident_modal import build_incident_modal
 from app.workers.slack_tasks import (
     handle_list_incidents,
     handle_list_meetings,
@@ -31,8 +33,6 @@ from app.workers.slack_tasks import (
     handle_slash_ask,
     handle_slash_search,
 )
-from app.slack.incident_modal import build_incident_modal
-from app.slack.factory import create_slack_client
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/slack", tags=["slack"])

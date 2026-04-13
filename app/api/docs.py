@@ -10,9 +10,9 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request,
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.settings import Settings, get_settings
-from app.limiter import limiter
 from app.db.repository import DocumentRepository
 from app.db.session import get_db
+from app.limiter import limiter
 from app.models.schemas import (
     DocumentDetail,
     DocumentListItem,

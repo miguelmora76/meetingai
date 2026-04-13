@@ -1,7 +1,7 @@
 """Unit tests for RAGQueryService."""
 
 import uuid
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 import pytest
 

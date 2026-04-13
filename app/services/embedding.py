@@ -11,7 +11,7 @@ import uuid
 from app.config.settings import Settings, get_settings
 from app.db.repository import MeetingRepository
 from app.llm.client import LLMClient
-from app.rag.chunker import Chunk, TranscriptChunker
+from app.rag.chunker import TranscriptChunker
 
 logger = logging.getLogger(__name__)
 

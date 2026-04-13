@@ -7,7 +7,6 @@ Each extraction method is independent so they can run concurrently via asyncio.g
 import json
 import logging
 import re
-from dataclasses import dataclass
 
 from app.config.settings import Settings, get_settings
 from app.llm.client import LLMClient

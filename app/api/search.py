@@ -7,15 +7,14 @@ Scope encoding (query params):
 """
 
 import logging
-import uuid
 
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.repository import MeetingRepository
 from app.db.session import get_db
-from app.llm.client import LLMClient
 from app.limiter import limiter
+from app.llm.client import LLMClient
 from app.models.schemas import (
     QARequest,
     QAResponse,
@@ -24,7 +23,7 @@ from app.models.schemas import (
     SearchResultItem,
 )
 from app.rag.qa import RAGQueryService
-from app.rag.retriever import PolymorphicRetriever, VectorRetriever
+from app.rag.retriever import PolymorphicRetriever
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["search"])

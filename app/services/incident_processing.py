@@ -12,7 +12,7 @@ import logging
 import uuid
 
 from app.config.settings import Settings, get_settings
-from app.db.repository import IncidentRepository, MeetingRepository
+from app.db.repository import IncidentRepository
 from app.llm.client import LLMClient
 from app.rag.chunker import TranscriptChunker
 from app.services.airtable_sync import AirtableSyncService
