@@ -85,6 +85,14 @@ export function IncidentDetail({ incidentId, onOpenChat }: IncidentDetailProps) 
           <span className={`capitalize ${incident.status === 'resolved' || incident.status === 'closed' ? 'text-[#a6e3a1]' : 'text-[#f9e2af]'}`}>
             {incident.status}
           </span>
+          {incident.airtable_record_id && (
+            <>
+              <span className="text-[#45475a]">·</span>
+              <span className="px-1.5 py-0.5 rounded bg-[#89b4fa]/10 border border-[#89b4fa]/30 text-[#89b4fa]">
+                Synced to Airtable
+              </span>
+            </>
+          )}
         </div>
 
         <div className="flex gap-2 mt-3 ml-6">

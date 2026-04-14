@@ -56,6 +56,7 @@ class Meeting(Base):
     duration_seconds = Column(Integer)
     status = Column(String(50), nullable=False, default="uploaded")
     error_message = Column(Text)
+    airtable_record_id = Column(String(100))
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
     updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -316,6 +317,7 @@ class Document(Base):
     content = Column(Text)
     processing_status = Column(String(50), nullable=False, default="pending")
     error_message = Column(Text)
+    airtable_record_id = Column(String(100))
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
     updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
 

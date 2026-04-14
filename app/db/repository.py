@@ -62,6 +62,16 @@ class MeetingRepository:
         await self.db.refresh(meeting)
         return meeting
 
+    async def update_meeting_airtable_id(
+        self, meeting_id: uuid.UUID, airtable_record_id: str
+    ) -> None:
+        result = await self.db.execute(select(Meeting).where(Meeting.id == meeting_id))
+        meeting = result.scalar_one_or_none()
+        if meeting:
+            meeting.airtable_record_id = airtable_record_id
+            meeting.updated_at = datetime.utcnow()
+            await self.db.commit()
+
     async def update_meeting_file_path(self, meeting_id: uuid.UUID, file_path: str) -> None:
         result = await self.db.execute(select(Meeting).where(Meeting.id == meeting_id))
         meeting = result.scalar_one_or_none()
@@ -484,6 +494,21 @@ class IncidentRepository:
             incident.updated_at = datetime.utcnow()
             await self.db.commit()
 
+    async def update_incident_status(
+        self,
+        incident_id: uuid.UUID,
+        status: str,
+        resolved_at: datetime | None = None,
+    ) -> None:
+        result = await self.db.execute(select(Incident).where(Incident.id == incident_id))
+        incident = result.scalar_one_or_none()
+        if incident:
+            incident.status = status
+            incident.updated_at = datetime.utcnow()
+            if resolved_at is not None:
+                incident.resolved_at = resolved_at
+            await self.db.commit()
+
     async def save_postmortem(
         self,
         incident_id: uuid.UUID,
@@ -619,6 +644,16 @@ class DocumentRepository:
             doc.updated_at = datetime.utcnow()
             if error_message is not None:
                 doc.error_message = error_message
+            await self.db.commit()
+
+    async def update_document_airtable_id(
+        self, document_id: uuid.UUID, airtable_record_id: str
+    ) -> None:
+        result = await self.db.execute(select(Document).where(Document.id == document_id))
+        doc = result.scalar_one_or_none()
+        if doc:
+            doc.airtable_record_id = airtable_record_id
+            doc.updated_at = datetime.utcnow()
             await self.db.commit()
 
     async def save_doc_chunk(

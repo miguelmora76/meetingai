@@ -15,6 +15,7 @@ import uuid
 from app.config.settings import Settings, get_settings
 from app.db.repository import MeetingRepository
 from app.llm.client import LLMClient
+from app.services.airtable_sync import AirtableSyncService
 from app.services.embedding import EmbeddingService
 from app.services.summarization import SummarizationService
 from app.services.transcription import TranscriptionService
@@ -39,6 +40,7 @@ class ProcessingService:
         self.summarization = SummarizationService(llm_client, self.settings)
         self.embedding = EmbeddingService(llm_client, repo, self.settings)
         self.slack = slack_client
+        self.airtable = AirtableSyncService(self.settings)
 
     async def process_meeting(self, meeting_id: uuid.UUID) -> None:
         """
@@ -130,6 +132,20 @@ class ProcessingService:
             logger.info(f"[{meeting_id}] Step 4/4: Sending notifications...")
             await self.repo.update_meeting_status(meeting_id, "completed")
             await self.slack.notify_processing_complete(meeting)
+
+            # ── Airtable sync (non-blocking; failure is logged, not raised) ──
+            airtable_record_id = await self.airtable.push_meeting(
+                meeting_id=meeting_id,
+                title=meeting.title,
+                date=date_str,
+                participants=meeting.participants or [],
+                summary=summary,
+                action_items=action_items,
+                decisions=decisions,
+                existing_record_id=getattr(meeting, "airtable_record_id", None),
+            )
+            if airtable_record_id:
+                await self.repo.update_meeting_airtable_id(meeting_id, airtable_record_id)
 
             logger.info(
                 f"[{meeting_id}] Processing complete: "

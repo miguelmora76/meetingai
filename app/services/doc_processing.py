@@ -13,6 +13,7 @@ from app.config.settings import Settings, get_settings
 from app.db.repository import DocumentRepository
 from app.llm.client import LLMClient
 from app.rag.chunker import TranscriptChunker
+from app.services.airtable_sync import AirtableSyncService
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +30,7 @@ class DocProcessingService:
         self.repo = doc_repo
         self.settings = settings or get_settings()
         self.llm = llm_client
+        self.airtable = AirtableSyncService(self.settings)
 
     async def process_document(self, document_id: uuid.UUID) -> None:
         try:
@@ -75,6 +77,19 @@ class DocProcessingService:
                 )
 
             await self.repo.update_document_processing_status(document_id, "completed")
+
+            # ── Airtable sync (non-blocking; failure is logged, not raised) ──
+            airtable_record_id = await self.airtable.push_document(
+                document_id=document_id,
+                title=doc.title,
+                doc_type=doc.doc_type or "architecture",
+                file_name=doc.file_name,
+                processing_status="completed",
+                existing_record_id=getattr(doc, "airtable_record_id", None),
+            )
+            if airtable_record_id:
+                await self.repo.update_document_airtable_id(document_id, airtable_record_id)
+
             logger.info(f"[{document_id}] Document processing complete: {len(chunks)} chunks embedded")
 
         except Exception as e:

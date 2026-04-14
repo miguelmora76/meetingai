@@ -15,15 +15,18 @@ from app.db.repository import IncidentRepository
 from app.db.session import get_db
 from app.limiter import limiter
 from app.models.schemas import (
+    AirtableSyncResponse,
     IncidentActionItemSchema,
     IncidentCreateRequest,
     IncidentDetail,
     IncidentListItem,
     IncidentListResponse,
     IncidentPostmortemSchema,
+    IncidentStatusUpdateRequest,
     IncidentTimelineEventSchema,
     IncidentUploadResponse,
 )
+from app.services.airtable_sync import AirtableSyncService
 from app.workers.tasks import process_incident_task
 
 logger = logging.getLogger(__name__)
@@ -124,6 +127,108 @@ async def upload_incident(
     )
 
 
+@router.patch("/{incident_id}", response_model=IncidentDetail)
+async def update_incident_status(
+    incident_id: uuid.UUID,
+    body: IncidentStatusUpdateRequest,
+    db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+):
+    """Update incident status and sync the change to Airtable."""
+    repo = IncidentRepository(db)
+    incident = await repo.get_incident(incident_id)
+
+    if not incident:
+        raise HTTPException(404, "Incident not found")
+
+    await repo.update_incident_status(
+        incident_id, status=body.status, resolved_at=body.resolved_at
+    )
+
+    # Sync status change to Airtable when a record already exists
+    if incident.airtable_record_id:
+        airtable = AirtableSyncService(settings)
+        await airtable.update_incident_status(
+            record_id=incident.airtable_record_id,
+            status=body.status,
+            resolved_at=body.resolved_at,
+        )
+
+    # Re-fetch to return updated state
+    incident = await repo.get_incident(incident_id)
+
+    postmortem = None
+    if incident.postmortem:
+        postmortem = IncidentPostmortemSchema.model_validate(incident.postmortem)
+
+    return IncidentDetail(
+        id=incident.id,
+        title=incident.title,
+        severity=incident.severity,
+        status=incident.status,
+        processing_status=incident.processing_status,
+        services_affected=incident.services_affected or [],
+        description=incident.description,
+        raw_text=incident.raw_text,
+        file_name=incident.file_name,
+        error_message=incident.error_message,
+        occurred_at=incident.occurred_at,
+        resolved_at=incident.resolved_at,
+        postmortem=postmortem,
+        timeline=[IncidentTimelineEventSchema.model_validate(ev) for ev in (incident.timeline_events or [])],
+        action_items=[IncidentActionItemSchema.model_validate(ai) for ai in (incident.action_items or [])],
+        airtable_record_id=incident.airtable_record_id,
+        created_at=incident.created_at,
+        updated_at=incident.updated_at,
+    )
+
+
+@router.post("/{incident_id}/sync", response_model=AirtableSyncResponse)
+async def sync_incident_to_airtable(
+    incident_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+):
+    """Manually push (or re-push) an incident to Airtable."""
+    if not settings.airtable_enabled:
+        raise HTTPException(503, "Airtable integration is not enabled")
+
+    repo = IncidentRepository(db)
+    incident = await repo.get_incident(incident_id)
+
+    if not incident:
+        raise HTTPException(404, "Incident not found")
+
+    postmortem = incident.postmortem
+    action_items = [
+        {
+            "description": ai.description,
+            "assignee": ai.assignee,
+            "priority": ai.priority or "medium",
+        }
+        for ai in (incident.action_items or [])
+    ]
+
+    airtable = AirtableSyncService(settings)
+    record_id = await airtable.push_incident(
+        incident_id=incident_id,
+        title=incident.title,
+        severity=incident.severity,
+        status=incident.status,
+        services_affected=incident.services_affected or [],
+        executive_summary=postmortem.executive_summary if postmortem else None,
+        root_cause_analysis=postmortem.root_cause_analysis if postmortem else None,
+        action_items=action_items,
+        occurred_at=incident.occurred_at,
+        existing_record_id=incident.airtable_record_id,
+    )
+
+    if record_id:
+        await repo.update_incident_airtable_id(incident_id, record_id)
+
+    return AirtableSyncResponse(airtable_record_id=record_id, synced=record_id is not None)
+
+
 @router.get("/{incident_id}", response_model=IncidentDetail)
 async def get_incident(
     incident_id: uuid.UUID,
@@ -166,6 +271,7 @@ async def get_incident(
         postmortem=postmortem,
         timeline=timeline,
         action_items=action_items,
+        airtable_record_id=incident.airtable_record_id,
         created_at=incident.created_at,
         updated_at=incident.updated_at,
     )

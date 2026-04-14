@@ -111,6 +111,7 @@ class MeetingDetail(BaseModel):
     summary: str | None = None
     action_items: list[ActionItemSchema] = []
     decisions: list[DecisionSchema] = []
+    airtable_record_id: str | None = None
     created_at: datetime
     updated_at: datetime | None = None
 
@@ -252,10 +253,21 @@ class IncidentDetail(BaseModel):
     postmortem: IncidentPostmortemSchema | None = None
     timeline: list[IncidentTimelineEventSchema] = []
     action_items: list[IncidentActionItemSchema] = []
+    airtable_record_id: str | None = None
     created_at: datetime
     updated_at: datetime | None = None
 
     model_config = {"from_attributes": True}
+
+
+class IncidentStatusUpdateRequest(BaseModel):
+    status: str = Field(..., description="New incident status (open, mitigated, resolved, closed)")
+    resolved_at: datetime | None = None
+
+
+class AirtableSyncResponse(BaseModel):
+    airtable_record_id: str | None
+    synced: bool
 
 
 # ── Document Schemas ─────────────────────────────────────────────────────
@@ -299,6 +311,7 @@ class DocumentDetail(BaseModel):
     file_size_bytes: int | None = None
     content: str | None = None
     error_message: str | None = None
+    airtable_record_id: str | None = None
     created_at: datetime
     updated_at: datetime | None = None
 

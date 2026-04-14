@@ -14,11 +14,13 @@ from app.db.repository import DocumentRepository
 from app.db.session import get_db
 from app.limiter import limiter
 from app.models.schemas import (
+    AirtableSyncResponse,
     DocumentDetail,
     DocumentListItem,
     DocumentListResponse,
     DocumentUploadResponse,
 )
+from app.services.airtable_sync import AirtableSyncService
 from app.workers.tasks import process_document_task
 
 logger = logging.getLogger(__name__)
@@ -80,6 +82,38 @@ async def upload_document(
         file_name=doc.file_name,
         created_at=doc.created_at,
     )
+
+
+@router.post("/{document_id}/sync", response_model=AirtableSyncResponse)
+async def sync_document_to_airtable(
+    document_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+):
+    """Manually push (or re-push) a document to Airtable."""
+    if not settings.airtable_enabled:
+        raise HTTPException(503, "Airtable integration is not enabled")
+
+    repo = DocumentRepository(db)
+    doc = await repo.get_document(document_id)
+
+    if not doc:
+        raise HTTPException(404, "Document not found")
+
+    airtable = AirtableSyncService(settings)
+    record_id = await airtable.push_document(
+        document_id=document_id,
+        title=doc.title,
+        doc_type=doc.doc_type or "architecture",
+        file_name=doc.file_name,
+        processing_status=doc.processing_status,
+        existing_record_id=doc.airtable_record_id,
+    )
+
+    if record_id:
+        await repo.update_document_airtable_id(document_id, record_id)
+
+    return AirtableSyncResponse(airtable_record_id=record_id, synced=record_id is not None)
 
 
 @router.get("/{document_id}", response_model=DocumentDetail)

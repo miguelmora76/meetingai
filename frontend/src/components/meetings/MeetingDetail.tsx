@@ -84,6 +84,11 @@ export function MeetingDetail({ meetingId, onOpenChat }: MeetingDetailProps) {
               {formatDuration(meeting.duration_seconds)}
             </span>
           )}
+          {meeting.airtable_record_id && (
+            <span className="px-1.5 py-0.5 rounded bg-[#89b4fa]/10 border border-[#89b4fa]/30 text-[#89b4fa] text-[10px]">
+              Synced to Airtable
+            </span>
+          )}
         </div>
 
         {meeting.participants && meeting.participants.length > 0 && (

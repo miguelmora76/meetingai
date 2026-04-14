@@ -1,5 +1,7 @@
 """Unit tests for SummarizationService._parse_json_list — JSON parsing robustness."""
 
+from unittest.mock import MagicMock
+
 import pytest
 
 from app.llm.client import LLMClient
@@ -7,9 +9,9 @@ from app.services.summarization import SummarizationService
 
 
 @pytest.fixture
-def service(mocker):
+def service():
     """Return a SummarizationService with a mocked LLMClient."""
-    llm = mocker.MagicMock(spec=LLMClient)
+    llm = MagicMock(spec=LLMClient)
     return SummarizationService(llm_client=llm)
 
 

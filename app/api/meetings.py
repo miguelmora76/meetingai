@@ -16,6 +16,7 @@ from app.db.session import get_db
 from app.limiter import limiter
 from app.models.schemas import (
     ActionItemSchema,
+    AirtableSyncResponse,
     DecisionSchema,
     MeetingDetail,
     MeetingListItem,
@@ -25,6 +26,7 @@ from app.models.schemas import (
     TranscriptSchema,
     TranscriptSegmentSchema,
 )
+from app.services.airtable_sync import AirtableSyncService
 from app.workers.tasks import process_meeting_task
 
 logger = logging.getLogger(__name__)
@@ -183,9 +185,62 @@ async def get_meeting(
         summary=meeting.summary.content if meeting.summary else None,
         action_items=[ActionItemSchema.model_validate(ai) for ai in (meeting.action_items or [])],
         decisions=[DecisionSchema.model_validate(d) for d in (meeting.decisions or [])],
+        airtable_record_id=meeting.airtable_record_id,
         created_at=meeting.created_at,
         updated_at=meeting.updated_at,
     )
+
+
+@router.post("/{meeting_id}/sync", response_model=AirtableSyncResponse)
+async def sync_meeting_to_airtable(
+    meeting_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+):
+    """Manually push (or re-push) a meeting to Airtable."""
+    if not settings.airtable_enabled:
+        raise HTTPException(503, "Airtable integration is not enabled")
+
+    repo = MeetingRepository(db)
+    meeting = await repo.get_meeting(meeting_id)
+
+    if not meeting:
+        raise HTTPException(404, "Meeting not found")
+
+    action_items = [
+        {
+            "description": ai.description,
+            "assignee": ai.assignee,
+            "priority": ai.priority or "medium",
+        }
+        for ai in (meeting.action_items or [])
+    ]
+    decisions = [
+        {
+            "description": d.description,
+            "rationale": d.rationale,
+        }
+        for d in (meeting.decisions or [])
+    ]
+
+    date_str = meeting.date.strftime("%Y-%m-%d") if meeting.date else None
+
+    airtable = AirtableSyncService(settings)
+    record_id = await airtable.push_meeting(
+        meeting_id=meeting_id,
+        title=meeting.title,
+        date=date_str,
+        participants=meeting.participants or [],
+        summary=meeting.summary.content if meeting.summary else None,
+        action_items=action_items,
+        decisions=decisions,
+        existing_record_id=meeting.airtable_record_id,
+    )
+
+    if record_id:
+        await repo.update_meeting_airtable_id(meeting_id, record_id)
+
+    return AirtableSyncResponse(airtable_record_id=record_id, synced=record_id is not None)
 
 
 @router.get("", response_model=MeetingListResponse)

@@ -18,6 +18,7 @@ def _make_mock_meeting(meeting_id: uuid.UUID, has_transcript: bool = False):
     meeting.file_path = "/tmp/fake.mp3"
     meeting.duration_seconds = None
     meeting.transcript = None
+    meeting.airtable_record_id = None
 
     if has_transcript:
         transcript = MagicMock()
@@ -34,7 +35,7 @@ def _make_mock_meeting(meeting_id: uuid.UUID, has_transcript: bool = False):
 
 
 @pytest.fixture
-def make_service(mocker):
+def make_service():
     """Return a factory that builds a ProcessingService with mocked dependencies."""
 
     def _factory():
@@ -73,6 +74,9 @@ def make_service(mocker):
         )
         service.embedding = MagicMock()
         service.embedding.embed_transcript = AsyncMock(return_value=5)
+
+        service.airtable = MagicMock()
+        service.airtable.push_meeting = AsyncMock(return_value=None)
 
         return service, repo
 

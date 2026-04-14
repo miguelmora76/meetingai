@@ -1,7 +1,7 @@
 """Unit tests for RAGQueryService."""
 
 import uuid
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -23,17 +23,17 @@ def _make_chunk(text: str = "Some relevant content.") -> RetrievedChunk:
 
 
 @pytest.fixture
-def mock_llm(mocker):
-    llm = mocker.MagicMock(spec=LLMClient)
+def mock_llm():
+    llm = MagicMock(spec=LLMClient)
     llm.complete = AsyncMock(return_value="Here is the answer.")
     llm.embed = AsyncMock(return_value=[[0.1] * 384])
     return llm
 
 
 @pytest.fixture
-def make_qa_service(mock_llm, mocker):
+def make_qa_service(mock_llm):
     def _factory(chunks: list):
-        retriever = mocker.MagicMock(spec=PolymorphicRetriever)
+        retriever = MagicMock(spec=PolymorphicRetriever)
         retriever.retrieve = AsyncMock(return_value=chunks)
         return RAGQueryService(llm_client=mock_llm, retriever=retriever)
 

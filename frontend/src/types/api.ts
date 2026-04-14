@@ -62,6 +62,7 @@ export interface MeetingDetail {
   summary: string | null
   action_items: ActionItem[]
   decisions: Decision[]
+  airtable_record_id?: string | null
   created_at: string
   updated_at: string
 }
@@ -186,6 +187,7 @@ export interface IncidentDetail {
   postmortem: IncidentPostmortem | null
   timeline: IncidentTimelineEvent[]
   action_items: IncidentActionItem[]
+  airtable_record_id?: string | null
   created_at: string
   updated_at: string | null
 }

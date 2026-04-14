@@ -40,7 +40,10 @@ class Settings(BaseSettings):
     airtable_enabled: bool = False
     airtable_api_key: str = ""
     airtable_base_id: str = ""
-    airtable_table_name: str = "Incidents"
+    airtable_table_name: str = "Incidents"       # incidents table (kept for backwards compat)
+    airtable_meetings_table_name: str = "Meetings"
+    airtable_docs_table_name: str = "Documents"
+    airtable_webhook_secret: str = ""            # Bearer token for POST /airtable/webhook
     app_base_url: str = "http://localhost:8000"
 
     # ── Slack ─────────────────────────────────────────────────────────────
