@@ -601,6 +601,7 @@ class DocumentRepository:
         file_name: str | None = None,
         file_size_bytes: int | None = None,
         content: str | None = None,
+        airtable_source_ref: dict | None = None,
     ) -> Document:
         doc = Document(
             title=title,
@@ -610,11 +611,24 @@ class DocumentRepository:
             file_size_bytes=file_size_bytes,
             content=content,
             processing_status="pending",
+            airtable_source_ref=airtable_source_ref,
         )
         self.db.add(doc)
         await self.db.commit()
         await self.db.refresh(doc)
         return doc
+
+    async def find_document_by_airtable_record(
+        self, base_id: str, record_id: str
+    ) -> Document | None:
+        """Return an existing document that was previously imported from the given Airtable record."""
+        result = await self.db.execute(
+            select(Document).where(
+                Document.airtable_source_ref.op("->>")("record_id") == record_id,
+                Document.airtable_source_ref.op("->>")("base_id") == base_id,
+            )
+        )
+        return result.scalar_one_or_none()
 
     async def get_document(self, document_id: uuid.UUID) -> Document | None:
         result = await self.db.execute(

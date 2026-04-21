@@ -24,16 +24,52 @@ import logging
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+import httpx
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.settings import Settings, get_settings
 from app.db.repository import IncidentRepository, MeetingRepository
 from app.db.session import get_db
+from app.models.schemas import (
+    AirtableBasesListResponse,
+    AirtableBaseSchema,
+    AirtableFieldSchema,
+    AirtableImportRequest,
+    AirtableImportStatusResponse,
+    AirtableTableSchema,
+    AirtableTablesListResponse,
+)
+from app.services.airtable_connection import AirtableConnectionService
+from app.services.airtable_import import AirtableImportService
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/airtable", tags=["airtable"])
+
+_AIRTABLE_META_BASES = "https://api.airtable.com/v0/meta/bases"
+
+
+async def _get_user_token(db: AsyncSession) -> str:
+    """Return the decrypted user PAT, or raise 400 if not connected."""
+    service = AirtableConnectionService(db)
+    token = await service.get_decrypted_token()
+    if not token:
+        raise HTTPException(400, "Airtable is not connected. POST /airtable/connect first.")
+    return token
+
+
+async def _airtable_get(path: str, token: str) -> dict:
+    """Thin wrapper around Airtable meta GET calls. Translates status codes to HTTPException."""
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        resp = await client.get(path, headers={"Authorization": f"Bearer {token}"})
+    if resp.status_code == 401:
+        raise HTTPException(401, "Airtable rejected the stored token. Please reconnect.")
+    if resp.status_code == 403:
+        raise HTTPException(403, "Token is missing required scopes.")
+    if resp.status_code >= 400:
+        raise HTTPException(resp.status_code, f"Airtable error: {resp.text[:200]}")
+    return resp.json()
 
 VALID_RESOURCE_TYPES = {"incident", "meeting"}
 VALID_INCIDENT_STATUSES = {"open", "mitigated", "resolved", "closed"}
@@ -112,3 +148,83 @@ async def airtable_webhook(
         logger.info(f"[airtable-webhook] Meeting {resource_id} status → {payload.status}")
 
     return {"ok": True}
+
+
+# ── User-facing bases / tables listing ───────────────────────────────────
+
+
+@router.get("/bases", response_model=AirtableBasesListResponse)
+async def list_bases(db: AsyncSession = Depends(get_db)):
+    """List all bases the connected user's PAT has access to."""
+    token = await _get_user_token(db)
+    data = await _airtable_get(_AIRTABLE_META_BASES, token)
+    bases = [
+        AirtableBaseSchema(
+            id=b["id"],
+            name=b.get("name", ""),
+            permission_level=b.get("permissionLevel"),
+        )
+        for b in data.get("bases", [])
+    ]
+    return AirtableBasesListResponse(bases=bases)
+
+
+@router.get("/bases/{base_id}/tables", response_model=AirtableTablesListResponse)
+async def list_tables(base_id: str, db: AsyncSession = Depends(get_db)):
+    """List tables and their fields for a given base."""
+    token = await _get_user_token(db)
+    data = await _airtable_get(f"{_AIRTABLE_META_BASES}/{base_id}/tables", token)
+    tables = []
+    for t in data.get("tables", []):
+        fields = [
+            AirtableFieldSchema(id=f["id"], name=f.get("name", ""), type=f.get("type", ""))
+            for f in t.get("fields", [])
+        ]
+        tables.append(
+            AirtableTableSchema(
+                id=t["id"],
+                name=t.get("name", ""),
+                primary_field_id=t.get("primaryFieldId"),
+                fields=fields,
+            )
+        )
+    return AirtableTablesListResponse(base_id=base_id, tables=tables)
+
+
+# ── Import: table → knowledge-base documents ─────────────────────────────
+
+
+@router.post("/import", response_model=AirtableImportStatusResponse, status_code=202)
+async def start_import(
+    payload: AirtableImportRequest,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+):
+    """Kick off an import of an Airtable table into knowledge-base documents."""
+    # Ensure the user has connected before accepting the job.
+    await _get_user_token(db)
+
+    service = AirtableImportService(db)
+    row = await service.create_import(
+        base_id=payload.base_id,
+        base_name=payload.base_name,
+        table_id=payload.table_id,
+        table_name=payload.table_name,
+        title_field=payload.title_field,
+        content_fields=payload.content_fields,
+    )
+
+    # Import lazily to avoid circular references at module load.
+    from app.workers.tasks import airtable_import_task
+
+    background_tasks.add_task(airtable_import_task, row.id)
+    return row
+
+
+@router.get("/imports/{import_id}", response_model=AirtableImportStatusResponse)
+async def get_import_status(import_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+    service = AirtableImportService(db)
+    row = await service.get_import(import_id)
+    if not row:
+        raise HTTPException(404, "Import not found")
+    return row

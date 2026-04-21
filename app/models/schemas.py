@@ -316,3 +316,78 @@ class DocumentDetail(BaseModel):
     updated_at: datetime | None = None
 
     model_config = {"from_attributes": True}
+
+
+# ── Airtable User Connection Schemas ──────────────────────────────────────
+
+
+class AirtableConnectRequest(BaseModel):
+    token: str = Field(..., min_length=10, description="Airtable personal access token")
+
+
+class AirtableConnectionResponse(BaseModel):
+    connected: bool
+    airtable_email: str | None = None
+    scopes: list[str] = []
+    missing_required_scopes: list[str] = []
+    connected_at: datetime | None = None
+
+
+class AirtableBaseSchema(BaseModel):
+    id: str
+    name: str
+    permission_level: str | None = None
+
+
+class AirtableFieldSchema(BaseModel):
+    id: str
+    name: str
+    type: str
+
+
+class AirtableTableSchema(BaseModel):
+    id: str
+    name: str
+    primary_field_id: str | None = None
+    fields: list[AirtableFieldSchema] = []
+
+
+class AirtableBasesListResponse(BaseModel):
+    bases: list[AirtableBaseSchema]
+
+
+class AirtableTablesListResponse(BaseModel):
+    base_id: str
+    tables: list[AirtableTableSchema]
+
+
+class AirtableImportRequest(BaseModel):
+    base_id: str
+    base_name: str | None = None
+    table_id: str
+    table_name: str | None = None
+    title_field: str | None = Field(
+        None,
+        description="Field name to use as document title. Defaults to the primary field.",
+    )
+    content_fields: list[str] = Field(
+        default_factory=list,
+        description="Field names to concatenate into the document body. Empty = all text-like fields.",
+    )
+
+
+class AirtableImportStatusResponse(BaseModel):
+    id: uuid.UUID
+    base_id: str
+    base_name: str | None = None
+    table_id: str
+    table_name: str | None = None
+    status: str
+    records_total: int
+    records_processed: int
+    documents_created: int
+    error_message: str | None = None
+    created_at: datetime
+    updated_at: datetime | None = None
+
+    model_config = {"from_attributes": True}

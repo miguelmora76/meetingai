@@ -33,7 +33,7 @@ from sqlalchemy import (
     String,
     Text,
 )
-from sqlalchemy.dialects.postgresql import ARRAY, UUID
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, relationship
 
 
@@ -318,6 +318,7 @@ class Document(Base):
     processing_status = Column(String(50), nullable=False, default="pending")
     error_message = Column(Text)
     airtable_record_id = Column(String(100))
+    airtable_source_ref = Column(JSONB)
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
     updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -347,4 +348,43 @@ class DocChunk(Base):
 
     __table_args__ = (
         Index("idx_doc_chunks_document", "document_id"),
+    )
+
+
+# ── Airtable User Connection Models ───────────────────────────────────────
+
+
+class AirtableConnection(Base):
+    __tablename__ = "airtable_connections"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(String(100), nullable=False, default="default", unique=True)
+    airtable_user_id = Column(String(100))
+    airtable_email = Column(String(500))
+    access_token_encrypted = Column(Text, nullable=False)
+    scopes = Column(ARRAY(String), default=list)
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class AirtableImport(Base):
+    __tablename__ = "airtable_imports"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    base_id = Column(String(100), nullable=False)
+    base_name = Column(String(500))
+    table_id = Column(String(100), nullable=False)
+    table_name = Column(String(500))
+    status = Column(String(50), nullable=False, default="pending")
+    records_total = Column(Integer, default=0)
+    records_processed = Column(Integer, default=0)
+    documents_created = Column(Integer, default=0)
+    title_field = Column(String(500))
+    content_fields = Column(ARRAY(String), default=list)
+    error_message = Column(Text)
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        Index("idx_airtable_imports_status", "status"),
     )

@@ -17,6 +17,7 @@ from app.config.settings import get_settings
 from app.db.repository import DocumentRepository, IncidentRepository, MeetingRepository
 from app.db.session import AsyncSessionLocal
 from app.llm.client import LLMClient
+from app.services.airtable_import import run_airtable_import
 from app.services.doc_processing import DocProcessingService
 from app.services.incident_processing import IncidentProcessingService
 from app.services.processing import ProcessingService
@@ -129,6 +130,48 @@ async def process_incident_task(incident_id: uuid.UUID, notify_channel: str | No
             await slack_client.notify_incident_complete(incident, channel=notify_channel)
     except Exception:
         logger.exception(f"Slack notification failed for incident {incident_id}")
+
+
+async def airtable_import_task(import_id: uuid.UUID) -> None:
+    """Background task: paginate an Airtable table into Documents + embed them."""
+    logger.info(f"Background task started for airtable import {import_id}")
+    settings = get_settings()
+    try:
+        await asyncio.wait_for(
+            run_airtable_import(import_id),
+            timeout=settings.processing_timeout_seconds,
+        )
+        logger.info(f"Background task completed for airtable import {import_id}")
+    except asyncio.TimeoutError:
+        logger.error(f"Background task timed out for airtable import {import_id}")
+        async with AsyncSessionLocal() as session:
+            from sqlalchemy import select
+
+            from app.models.database import AirtableImport
+
+            result = await session.execute(
+                select(AirtableImport).where(AirtableImport.id == import_id)
+            )
+            row = result.scalar_one_or_none()
+            if row:
+                row.status = "failed"
+                row.error_message = "Import timed out"
+                await session.commit()
+    except Exception as e:
+        logger.exception(f"Background task failed for airtable import {import_id}: {e}")
+        async with AsyncSessionLocal() as session:
+            from sqlalchemy import select
+
+            from app.models.database import AirtableImport
+
+            result = await session.execute(
+                select(AirtableImport).where(AirtableImport.id == import_id)
+            )
+            row = result.scalar_one_or_none()
+            if row:
+                row.status = "failed"
+                row.error_message = str(e)[:1000]
+                await session.commit()
 
 
 async def process_document_task(document_id: uuid.UUID) -> None:

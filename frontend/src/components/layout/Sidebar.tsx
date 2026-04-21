@@ -1,11 +1,14 @@
 import { useState } from 'react'
-import { Upload, Search, Bot, AlertTriangle, FileText, ChevronDown, ChevronRight } from 'lucide-react'
+import { Upload, Search, Bot, AlertTriangle, FileText, ChevronDown, ChevronRight, Database } from 'lucide-react'
 import { MeetingListItem } from '../meetings/MeetingListItem'
 import { UploadDialog } from '../meetings/UploadDialog'
 import { IncidentListItem } from '../incidents/IncidentListItem'
 import { CreateIncidentDialog } from '../incidents/CreateIncidentDialog'
 import { DocListItem } from '../docs/DocListItem'
 import { UploadDocDialog } from '../docs/UploadDocDialog'
+import { AirtableConnectionPill } from '../airtable/AirtableConnectionPill'
+import { AirtableImportDialog } from '../airtable/AirtableImportDialog'
+import { useAirtableConnection } from '../../hooks/useAirtable'
 import type { MeetingListItem as MeetingType, IncidentListItem as IncidentType, DocumentListItem as DocType } from '../../types/api'
 
 interface SidebarProps {
@@ -64,18 +67,25 @@ export function Sidebar({
   const [meetingUploadOpen, setMeetingUploadOpen] = useState(false)
   const [incidentDialogOpen, setIncidentDialogOpen] = useState(false)
   const [docUploadOpen, setDocUploadOpen] = useState(false)
+  const [airtableImportOpen, setAirtableImportOpen] = useState(false)
 
   const [meetingsExpanded, setMeetingsExpanded] = useState(true)
   const [incidentsExpanded, setIncidentsExpanded] = useState(true)
   const [docsExpanded, setDocsExpanded] = useState(true)
 
+  const { data: airtableConnection } = useAirtableConnection()
+  const airtableConnected = airtableConnection?.connected ?? false
+
   return (
     <aside className="w-[280px] shrink-0 bg-[#1e1e2e] border-r border-[#313244] flex flex-col h-full overflow-hidden">
       {/* Header */}
       <div className="px-4 pt-5 pb-4 border-b border-[#313244] shrink-0">
-        <div className="flex items-center gap-2 mb-1">
-          <Bot size={18} className="text-[#89b4fa]" />
-          <h1 className="text-sm font-bold text-gray-100">EngineerAI</h1>
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-2">
+            <Bot size={18} className="text-[#89b4fa]" />
+            <h1 className="text-sm font-bold text-gray-100">EngineerAI</h1>
+          </div>
+          <AirtableConnectionPill />
         </div>
         <p className="text-[10px] text-[#6c7086] ml-6">AI Engineering Assistant</p>
       </div>
@@ -167,13 +177,24 @@ export function Sidebar({
           expanded={docsExpanded}
           onToggle={() => setDocsExpanded((v) => !v)}
           action={
-            <button
-              onClick={() => setDocUploadOpen(true)}
-              className="p-1 text-[#6c7086] hover:text-[#89dceb] transition-colors"
-              title="Add document"
-            >
-              <FileText size={12} />
-            </button>
+            <div className="flex items-center gap-1">
+              {airtableConnected && (
+                <button
+                  onClick={() => setAirtableImportOpen(true)}
+                  className="p-1 text-[#6c7086] hover:text-[#f5a97f] transition-colors"
+                  title="Import from Airtable"
+                >
+                  <Database size={12} />
+                </button>
+              )}
+              <button
+                onClick={() => setDocUploadOpen(true)}
+                className="p-1 text-[#6c7086] hover:text-[#89dceb] transition-colors"
+                title="Add document"
+              >
+                <FileText size={12} />
+              </button>
+            </div>
           }
         />
         {docsExpanded && (
@@ -215,6 +236,10 @@ export function Sidebar({
         open={docUploadOpen}
         onOpenChange={setDocUploadOpen}
         onUploaded={() => setDocUploadOpen(false)}
+      />
+      <AirtableImportDialog
+        open={airtableImportOpen}
+        onOpenChange={setAirtableImportOpen}
       />
     </aside>
   )

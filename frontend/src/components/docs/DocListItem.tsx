@@ -1,4 +1,4 @@
-import { FileText, Loader2 } from 'lucide-react'
+import { FileText, Loader2, Database } from 'lucide-react'
 import type { DocumentListItem } from '../../types/api'
 
 interface DocListItemProps {
@@ -9,6 +9,7 @@ interface DocListItemProps {
 
 export function DocListItem({ doc, isSelected, onClick }: DocListItemProps) {
   const isProcessing = ['pending', 'embedding'].includes(doc.processing_status)
+  const isAirtable = doc.doc_type === 'airtable'
 
   return (
     <button
@@ -20,7 +21,11 @@ export function DocListItem({ doc, isSelected, onClick }: DocListItemProps) {
       }`}
     >
       <div className="flex items-start gap-2">
-        <FileText size={12} className="text-[#89dceb] shrink-0 mt-0.5" />
+        {isAirtable ? (
+          <Database size={12} className="text-[#f5a97f] shrink-0 mt-0.5" />
+        ) : (
+          <FileText size={12} className="text-[#89dceb] shrink-0 mt-0.5" />
+        )}
         <div className="flex-1 min-w-0">
           <p className="text-xs text-gray-200 leading-tight truncate">{doc.title}</p>
           <div className="flex items-center gap-1.5 mt-1">

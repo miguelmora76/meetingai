@@ -3,6 +3,7 @@
 from fastapi import APIRouter
 
 from app.api.admin import router as admin_router
+from app.api.airtable_connection_router import router as airtable_connection_router
 from app.api.airtable_router import router as airtable_router
 from app.api.docs import router as docs_router
 from app.api.health import router as health_router
@@ -21,3 +22,4 @@ api_router.include_router(docs_router)
 api_router.include_router(search_router)
 api_router.include_router(slack_router)
 api_router.include_router(airtable_router)
+api_router.include_router(airtable_connection_router)

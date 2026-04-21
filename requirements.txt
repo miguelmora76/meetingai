@@ -28,6 +28,7 @@ httpx>=0.26.0
 
 # Airtable
 pyairtable>=2.3.0
+cryptography>=42.0.0
 
 # Reliability
 tenacity>=8.2.0

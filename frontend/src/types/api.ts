@@ -241,3 +241,72 @@ export interface DocumentUploadResponse {
   file_name?: string
   created_at: string
 }
+
+// ── Airtable Types ─────────────────────────────────────────────────────────
+
+export interface AirtableConnection {
+  connected: boolean
+  airtable_email: string | null
+  scopes: string[]
+  missing_required_scopes: string[]
+  connected_at: string | null
+}
+
+export interface AirtableBase {
+  id: string
+  name: string
+  permission_level: string | null
+}
+
+export interface AirtableField {
+  id: string
+  name: string
+  type: string
+}
+
+export interface AirtableTable {
+  id: string
+  name: string
+  primary_field_id: string | null
+  fields: AirtableField[]
+}
+
+export interface AirtableBasesListResponse {
+  bases: AirtableBase[]
+}
+
+export interface AirtableTablesListResponse {
+  base_id: string
+  tables: AirtableTable[]
+}
+
+export type AirtableImportStatus =
+  | 'pending'
+  | 'fetching'
+  | 'processing'
+  | 'completed'
+  | 'failed'
+
+export interface AirtableImportStatusResponse {
+  id: string
+  base_id: string
+  base_name: string | null
+  table_id: string
+  table_name: string | null
+  status: AirtableImportStatus
+  records_total: number
+  records_processed: number
+  documents_created: number
+  error_message: string | null
+  created_at: string
+  updated_at: string | null
+}
+
+export interface AirtableImportRequest {
+  base_id: string
+  base_name?: string
+  table_id: string
+  table_name?: string
+  title_field?: string
+  content_fields?: string[]
+}

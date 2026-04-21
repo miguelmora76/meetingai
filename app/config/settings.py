@@ -46,6 +46,11 @@ class Settings(BaseSettings):
     airtable_webhook_secret: str = ""            # Bearer token for POST /airtable/webhook
     app_base_url: str = "http://localhost:8000"
 
+    # Fernet key for encrypting user-provided Airtable PATs at rest.
+    # Generate with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+    # Must be stable across restarts — losing it orphans all stored tokens.
+    airtable_token_encryption_key: str = ""
+
     # ── Slack ─────────────────────────────────────────────────────────────
     slack_enabled: bool = False
     slack_bot_token: str = ""
